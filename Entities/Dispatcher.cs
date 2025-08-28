@@ -40,7 +40,7 @@ namespace Entities
                 elevatorsGoingInSameDirection = Elevators.ToList();
             }
             var closestToTheFloor = elevatorsGoingInSameDirection.OrderBy(e => e.AssignedRequests.Count)
-                                                                 .ThenByDescending(e => Math.Abs(e.CurrentFloor.FloorNumber - request.Floor.FloorNumber))
+                                                                 .ThenBy(e => Math.Abs(e.CurrentFloor.FloorNumber - request.Floor.FloorNumber))
                                                                  .First();
 
             closestToTheFloor.AssignRequest(request);

@@ -59,5 +59,23 @@ namespace UnitTests
 
             Assert.That(f1 < f2, Is.True);
         }
+
+        [Test]
+        public void OperatorGreaterThan_ShouldReturnTrue_WhenEqual()
+        {
+            var f1 = FloorValue.Create(7);
+            var f2 = FloorValue.Create(7);
+
+            Assert.That(f1 == f2, Is.True);
+        }
+
+        [Test]
+        public void OperatorLessThan_ShouldReturnTrue_WhenNotEqual()
+        {
+            var f1 = FloorValue.Create(2);
+            var f2 = FloorValue.Create(8);
+
+            Assert.That(f1 != f2, Is.True);
+        }
     }
 }

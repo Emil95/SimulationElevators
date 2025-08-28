@@ -5,10 +5,7 @@ namespace Entities
 {
     public class Elevator : IElevator
     {
-        /// <summary>
-        /// 10 second action timer
-        /// </summary>
-        private static int ACTION_TIME = 10_000;
+        private readonly int _actionTime;
 
         public int Id { get; }
 
@@ -20,13 +17,14 @@ namespace Entities
 
         public List<Request> AssignedRequests { get; set; }
 
-        public Elevator(int id)
+        public Elevator(int id, int actionTime = 10_000)
         {
             AssignedRequests = new List<Request>();
             Id = id;
             CurrentFloor = FloorValue.Create(0);
             Direction = DirectionEnum.IDLE;
             Status = StatusEnum.IDLE;
+            _actionTime = actionTime;
         }
 
         public async Task MoveAsync()
@@ -39,29 +37,43 @@ namespace Entities
                  await Task.Delay(500);
              }
              else
-             {   
-                 if(AssignedRequests.Any(x=> x.Floor.FloorNumber == CurrentFloor.FloorNumber))
-                 {
-                    DirectionEnum directionBeforeStop = Direction;
-                     await StopAsync();
-                     SetNextRequest(directionBeforeStop);
-                 }
-                 else
-                 {   if(CurrentFloor < AssignedRequests.First().Floor)
-                     {
-                         await SetMovingUpAsync();
-                     }
-                     else
-                     {
-                         await SetMovingDownAsync();
-                     }
-                 }
-             }
+             {
+                var nextRequest = GetNextRequest();
+                if (nextRequest == null)
+                {
+                    Direction = DirectionEnum.IDLE;
+                    Status = StatusEnum.IDLE;
+                    await Task.Delay(500);
+                }
+                else
+                {
+                    if (nextRequest.Floor == CurrentFloor)
+                    {
+                        await StopAsync();
+                        AssignedRequests.Remove(nextRequest);
+                        AssignedRequests = AssignedRequests.Where(x => !(x.Floor == nextRequest.Floor && 
+                                                                         x.Direction == nextRequest.Direction)).ToList();
+                        SetDirection();
+                    }
+                    else
+                    {
+                        Status = StatusEnum.MOVING;
+                        if (CurrentFloor.FloorNumber < nextRequest.Floor)
+                        {
+                            await SetMovingUpAsync(nextRequest.Floor);
+                        }
+                        else
+                        {
+                            await SetMovingDownAsync(nextRequest.Floor);
+                        }
+                    }
+                }
+            }
         }
 
         public void StatusUpdate()
         {
-            Console.WriteLine($"{DateTime.UtcNow.ToString("hh:mm:ss")} timestamp: Car {Id} is on {CurrentFloor.FloorNumber} floor, Status:{Status}, Direction:{Direction}");
+            Console.WriteLine($"{DateTime.UtcNow.ToString("hh:mm:ss")} timestamp: Car {Id} is on {CurrentFloor.ToString()} floor, Status:{Status}, Direction:{Direction}");
         }
 
         public async Task StopAsync()
@@ -70,44 +82,80 @@ namespace Entities
             {
                 Status = StatusEnum.STOPPED;
                 Direction = DirectionEnum.IDLE;
-                await Task.Delay(ACTION_TIME);
-                Console.WriteLine($"Car {Id} is on {CurrentFloor.FloorNumber} floor has stoped for {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+                await Task.Delay(_actionTime);
+                Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor has stopped for {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
             }
         }
 
         public void AssignRequest(Request request)
         {
             AssignedRequests.Add(request);
+            if (Direction == DirectionEnum.IDLE)
+            {
+                SetDirection();
+            }
         }
 
-        private async Task SetMovingDownAsync()
+        private Request? GetNextRequest()
+        {
+            if (!AssignedRequests.Any())
+            {
+                return null;
+            }
+
+            if (Direction == DirectionEnum.UP)
+            {
+                return AssignedRequests.Where(r => r.Floor >= CurrentFloor).OrderBy(r => r.Floor).FirstOrDefault()
+                   ?? AssignedRequests.OrderByDescending(r => r.Floor).FirstOrDefault();
+            }
+
+            else if (Direction == DirectionEnum.DOWN)
+            {
+                return AssignedRequests.Where(r => r.Floor.FloorNumber <= CurrentFloor).OrderByDescending(r => r.Floor).FirstOrDefault()
+                    ?? AssignedRequests.OrderBy(r => r.Floor).FirstOrDefault();
+            }
+                
+            return AssignedRequests.OrderBy(r => Math.Abs(r.Floor - CurrentFloor)).FirstOrDefault();
+        }
+
+        private void SetDirection()
+        {
+            if (!AssignedRequests.Any())
+            {
+                Direction = DirectionEnum.IDLE;
+            }
+
+            if (AssignedRequests.Any(r => r.Floor > CurrentFloor))
+            {
+                Direction = DirectionEnum.UP;
+            }
+            else if (AssignedRequests.Any(r => r.Floor < CurrentFloor))
+            {
+                Direction = DirectionEnum.DOWN;
+            }
+            else
+            {
+                Direction = DirectionEnum.IDLE;
+            }
+        }
+
+        private async Task SetMovingDownAsync(int moveToFlorNumber)
         {
             Direction = DirectionEnum.DOWN;
             Status = StatusEnum.MOVING;
             CurrentFloor.FloorNumber--;
-            await Task.Delay(ACTION_TIME);
-            Console.WriteLine($"Car {Id} is on {CurrentFloor.FloorNumber} floor is moving DOWN to {AssignedRequests.First().Floor.FloorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+            await Task.Delay(_actionTime);
+            Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor is moving DOWN to {moveToFlorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
         }
 
-        private async Task SetMovingUpAsync()
+        private async Task SetMovingUpAsync(int moveToFlorNumber)
         {
             Direction = DirectionEnum.UP;
             Status = StatusEnum.MOVING;
             CurrentFloor.FloorNumber++;
-            await Task.Delay(ACTION_TIME);
-            Console.WriteLine($"Car {Id} is on {CurrentFloor.FloorNumber} floor is moving UP to {AssignedRequests.First().Floor.FloorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+            await Task.Delay(_actionTime);
+            Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor is moving UP to {moveToFlorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
         }
 
-        private void SetNextRequest(DirectionEnum directionEnum)
-        {
-            AssignedRequests = AssignedRequests.Where(x => x.Floor.FloorNumber != CurrentFloor.FloorNumber && 
-                                                           x.Direction != directionEnum)
-                                               .DistinctBy(x=> x.Floor.FloorNumber)
-                                               .ToList();
-
-            AssignedRequests = AssignedRequests.OrderBy(x => x.Direction == Direction)
-                                               .ThenBy(x => Math.Abs(CurrentFloor.FloorNumber - x.Floor.FloorNumber))
-                                               .ToList();
-        }
     }
 }

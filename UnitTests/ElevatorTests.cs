@@ -9,11 +9,13 @@ namespace UnitTests
     public class ElevatorTests
     {
 
+        private readonly int _actionTime = 1;
+
         [Test]
         public void Constructor_DefaultSetupOfElevator()
         {
             // Arrange and Act
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
 
        
             // Assert
@@ -30,7 +32,7 @@ namespace UnitTests
         public void AssignRequest_AddValidRequest()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
 
             // Act
             elevator.AssignRequest(new Request(FloorValue.Create(5), DirectionEnum.UP));
@@ -47,7 +49,7 @@ namespace UnitTests
         public async Task StopAsync_ShouldChangeStatusToStopped_WhenMoving()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.Status = StatusEnum.MOVING;
             elevator.Direction = DirectionEnum.UP;
             elevator.CurrentFloor = FloorValue.Create(3);
@@ -64,7 +66,7 @@ namespace UnitTests
         public async Task StopAsync_ShouldNotChangeStatus_WhenNotMoving()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.Status = StatusEnum.IDLE; // already idle
             elevator.Direction = DirectionEnum.IDLE;
 
@@ -80,7 +82,7 @@ namespace UnitTests
         public async Task StopAsync_ShouldKeepSameFloor_WhenStopped()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.CurrentFloor = FloorValue.Create(5);
             elevator.Status = StatusEnum.MOVING;
 
@@ -97,7 +99,7 @@ namespace UnitTests
         public async Task MoveAsync_ShouldBeIdle_WhenNoRequests()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
 
             // Act
             await elevator.MoveAsync();
@@ -111,7 +113,7 @@ namespace UnitTests
         public async Task MoveAsync_ShouldMoveUp_WhenRequestAbove()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(5), DirectionEnum.UP));
 
             // Act
@@ -127,7 +129,7 @@ namespace UnitTests
         public async Task MoveAsync_ShouldMoveDown_WhenRequestBelow()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.CurrentFloor = FloorValue.Create(5);
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(2), DirectionEnum.DOWN));
 
@@ -144,7 +146,7 @@ namespace UnitTests
         public async Task MoveAsync_ShouldStop_WhenReachesRequestFloor()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.CurrentFloor = FloorValue.Create(2);
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(2), DirectionEnum.UP));
             elevator.Status = StatusEnum.MOVING;
@@ -162,7 +164,7 @@ namespace UnitTests
         public async Task MoveAsync_ShouldContinueUpUntilNoMoreRequestsAbove()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.CurrentFloor = FloorValue.Create(3);
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(5), DirectionEnum.UP));
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(7), DirectionEnum.UP));
@@ -176,14 +178,14 @@ namespace UnitTests
             // Assert
             Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(5));
             Assert.That(elevator.Status, Is.EqualTo(StatusEnum.STOPPED));
-            Assert.That(elevator.AssignedRequests.Exists(r => r.Floor.FloorNumber == 5), Is.False);
+            Assert.That(elevator.AssignedRequests.Exists(r => r.Floor == 5), Is.False);
         }
 
         [Test]
         public async Task MoveAsync_ShouldSwitchDirection_WhenNoMoreRequestsUp()
         {
             // Arrange
-            Elevator elevator = new Elevator(1);
+            Elevator elevator = new Elevator(1, _actionTime);
             elevator.CurrentFloor = FloorValue.Create(3);
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(5), DirectionEnum.UP));
             elevator.AssignedRequests.Add(new Request(FloorValue.Create(1), DirectionEnum.DOWN));
@@ -196,6 +198,76 @@ namespace UnitTests
 
             // Assert
             Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.DOWN));
+        }
+
+        [Test]
+        public async Task MoveAsync_ValidateMovement()
+        {
+            // Arrange
+            Elevator elevator = new Elevator(1, _actionTime);
+            elevator.CurrentFloor = FloorValue.Create(3);
+            elevator.Direction = DirectionEnum.UP;
+            elevator.Status = StatusEnum.MOVING;
+
+            elevator.AssignedRequests.Add(new Request(FloorValue.Create(5), DirectionEnum.UP));
+            elevator.AssignedRequests.Add(new Request(FloorValue.Create(1), DirectionEnum.DOWN));
+            elevator.AssignedRequests.Add(new Request(FloorValue.Create(3), DirectionEnum.UP));
+            elevator.AssignedRequests.Add(new Request(FloorValue.Create(8), DirectionEnum.DOWN));
+
+            // Act
+            await elevator.MoveAsync(); // stop at 3
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.STOPPED));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(3));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(3));
+
+            await elevator.MoveAsync(); // move 4
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(4));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(3));
+
+            await elevator.MoveAsync(); // move 5
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(5));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(3));
+            await elevator.MoveAsync(); // stop at 5 
+
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.STOPPED));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(5));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(2));
+            
+            await elevator.MoveAsync(); // switch to DOWN move 6
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(6));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(2));
+
+            await elevator.MoveAsync(); // move 7
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(7));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(2));
+
+            await elevator.MoveAsync(); // move 8
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.UP));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(8));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(2));
+
+            await elevator.MoveAsync(); // stop 8
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.DOWN));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.STOPPED));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(8));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(1));
+
+            await elevator.MoveAsync(); // stop 7
+            Assert.That(elevator.Direction, Is.EqualTo(DirectionEnum.DOWN));
+            Assert.That(elevator.Status, Is.EqualTo(StatusEnum.MOVING));
+            Assert.That(elevator.CurrentFloor.FloorNumber, Is.EqualTo(7));
+            Assert.That(elevator.AssignedRequests.Count, Is.EqualTo(1));
         }
 
         #endregion

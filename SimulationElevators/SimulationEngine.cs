@@ -5,7 +5,7 @@ namespace Controll
 {
     public class Simulation : ISimulation
     {
-        public readonly int ELEVATOR_NUMBER = 1;
+        public readonly int ELEVATOR_NUMBER = 4;
 
         public Dispatcher Dispatcher { get; set; }
         public List<Elevator> Elevators { get; set; }
@@ -41,7 +41,16 @@ namespace Controll
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await RanomizeRequestsAsync(cancellationToken);
+                    try
+                    {
+                        await RanomizeRequestsAsync(cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Generation request exceptions:{e.Message}");
+                        Console.Write(e.InnerException.ToString());
+                    }
+
                 }
             },cancellationToken);
 
@@ -51,8 +60,15 @@ namespace Controll
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await x.MoveAsync();
-                    await Task.Delay(100);
+                    try { 
+                        await x.MoveAsync();
+                        await Task.Delay(100); 
+                    }
+                    catch (Exception e)
+                    {   
+                        Console.WriteLine($"Move action exceptions:{e.Message}");
+                        Console.Write(e.InnerException.ToString());
+                    }
                 }
             }, cancellationToken)).ToList();
 
@@ -62,8 +78,16 @@ namespace Controll
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Dispatcher.ElevatorStatusUpdate();
-                    await Task.Delay(10000);
+                    try
+                    {
+                        Dispatcher.ElevatorStatusUpdate();
+                        await Task.Delay(10000);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Starts update exceptions:{e.Message}");
+                        Console.Write(e.InnerException.ToString());
+                    }
                 }
             },cancellationToken);
 
