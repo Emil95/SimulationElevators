@@ -73,7 +73,7 @@ namespace Entities
 
         public void StatusUpdate()
         {
-            Console.WriteLine($"{DateTime.UtcNow.ToString("hh:mm:ss")} timestamp: Car {Id} is on {CurrentFloor.ToString()} floor, Status:{Status}, Direction:{Direction}");
+            Console.WriteLine($"*Status*: {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp: Elevator{Id} is on {CurrentFloor.ToString()} floor, Status:{Status}, Direction:{Direction}");
         }
 
         public async Task StopAsync()
@@ -83,7 +83,7 @@ namespace Entities
                 Status = StatusEnum.STOPPED;
                 Direction = DirectionEnum.IDLE;
                 await Task.Delay(_actionTime);
-                Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor has stopped for {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+                Console.WriteLine($"**Action**: {DateTime.UtcNow.ToString("hh:mm:ss")} => Elevator{Id} is on {CurrentFloor.ToString()} floor has stopped.");
             }
         }
 
@@ -145,7 +145,7 @@ namespace Entities
             Status = StatusEnum.MOVING;
             CurrentFloor.FloorNumber--;
             await Task.Delay(_actionTime);
-            Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor is moving DOWN to {moveToFlorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+            Console.WriteLine($"**Action**: {DateTime.UtcNow.ToString("hh:mm:ss")} => Elevator{Id} is on {CurrentFloor.ToString()} floor is moving DOWN to {moveToFlorNumber} floor.");
         }
 
         private async Task SetMovingUpAsync(int moveToFlorNumber)
@@ -154,7 +154,7 @@ namespace Entities
             Status = StatusEnum.MOVING;
             CurrentFloor.FloorNumber++;
             await Task.Delay(_actionTime);
-            Console.WriteLine($"Car {Id} is on {CurrentFloor.ToString()} floor is moving UP to {moveToFlorNumber} floor, {DateTime.UtcNow.ToString("hh:mm:ss")} timestamp");
+            Console.WriteLine($"**Action**: {DateTime.UtcNow.ToString("hh:mm:ss")} => Elevator{Id} is on {CurrentFloor.ToString()} floor is moving UP to {moveToFlorNumber} floor.");
         }
 
     }

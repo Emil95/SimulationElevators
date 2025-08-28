@@ -44,7 +44,7 @@ namespace Entities
                                                                  .First();
 
             closestToTheFloor.AssignRequest(request);
-            Console.WriteLine($"{DateTime.UtcNow.ToString("hh:mm:ss")}-> Request generated: {request.Floor.FloorNumber} floor, {request.Direction}: direction -> Elevator{closestToTheFloor.Id} ");
+            Console.WriteLine($"**Request generated**: {DateTime.UtcNow.ToString("hh:mm:ss")} -> {request.Floor.FloorNumber} floor, {request.Direction}: direction -> Elevator{closestToTheFloor.Id} ");
         }
     }
 }
